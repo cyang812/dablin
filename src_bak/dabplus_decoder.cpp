@@ -461,10 +461,6 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 	const unsigned int input_buffer_size[1] {(unsigned int) len};
 	unsigned int bytes_valid = len;
 
-	uint8_t* asc_array[1] {asc};  //cyang add
-	fwrite(asc_array, 7 , 1, stdout);  //cyang add
-	fwrite(data, len, 1, stdout); //cyang add
-
 	// fill internal input buffer
 	AAC_DECODER_ERROR result = aacDecoder_Fill(handle, input_buffer, input_buffer_size, &bytes_valid);
 	if(result != AAC_DEC_OK)
