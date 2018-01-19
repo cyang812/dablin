@@ -65,6 +65,31 @@ struct SuperframeFormat {
 };
 
 
+// --- adts-header---- //cyang add
+typedef struct adts_fixed_header 
+{  
+	unsigned int syncword:12;//同步字0xfff，说明一个ADTS帧的开始
+	unsigned char ID:1;//ID比较奇怪,标准文档中是这么说的”MPEG identifier, set to ‘1’. See ISO/IEC 11172-3″,但我写0了,也可以
+	unsigned char layer:2;//一般设置为0
+	unsigned char protection_absent:1;//是否误码校验
+	unsigned char profile:2;//表示使用哪个级别的AAC，如01 Low Complexity(LC)--- AACLC
+	unsigned char sampling_frequency_index:4;//表示使用的采样率下标0x3 48k ,0x4 44.1k, 0x5 32k
+	unsigned char private_bit:1;//一般设置为0
+	unsigned char channel_configuration:3;// 表示声道数
+	unsigned char original_copy:1;//一般设置为0
+	unsigned char home:1;//一般设置为0
+}adts_fixed;
+
+typedef struct adts_variable_header
+{  
+	unsigned char copyright_identification_bit:1;//一般设置为0
+	unsigned char copyright_identification_start:1;//一般设置为0
+	unsigned int frame_length:13;// 一个ADTS帧的长度包括ADTS头和raw data block
+	unsigned int adts_buffer_fullness:11;// 0x7FF 说明是码率可变的码流
+	unsigned char number_of_raw_data_blocks_in_frame:2;//表示ADTS帧中有number_of_raw_data_blocks_in_frame + 1个AAC原始帧.
+}adts_variable;
+
+
 // --- RSDecoder -----------------------------------------------------------------
 class RSDecoder {
 private:
@@ -86,6 +111,7 @@ protected:
 	SubchannelSinkObserver* observer;
 	uint8_t asc[7];
 	size_t asc_len;
+	uint8_t adts_header[7];  //cyang add
 public:
 	AACDecoder(std::string decoder_name, SubchannelSinkObserver* observer, SuperframeFormat sf_format);
 	virtual ~AACDecoder() {}
