@@ -473,10 +473,10 @@ AACDecoderFDKAAC::AACDecoderFDKAAC(SubchannelSinkObserver* observer, SuperframeF
 
 	uint8_t* asc_array[1] {asc};
 	const unsigned int asc_sizeof_array[1] {(unsigned int) asc_len};
-//	fwrite(asc, 7 , 1, stdout);    //cyang add
-//	init_result = aacDecoder_ConfigRaw(handle, asc_array, asc_sizeof_array);
-//	if(init_result != AAC_DEC_OK)
-//		throw std::runtime_error("AACDecoderFDKAAC: error while aacDecoder_ConfigRaw: " + std::to_string(init_result));
+	fwrite(asc, 7 , 1, stdout);    //cyang add
+	init_result = aacDecoder_ConfigRaw(handle, asc_array, asc_sizeof_array);
+	if(init_result != AAC_DEC_OK)
+		throw std::runtime_error("AACDecoderFDKAAC: error while aacDecoder_ConfigRaw: " + std::to_string(init_result));
 
 	output_frame_len = 960 * 2 * channels * (sf_format.sbr_flag ? 2 : 1);
 	output_frame = new uint8_t[output_frame_len];
@@ -510,7 +510,8 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 		data += pad_len + 2;
 		bytes_valid -= pad_len + 2;
 	}
-
+	
+#if 0 //write adts
 	uint32_t aac_frame_size = bytes_valid + 7; //len + adts_header_len
 	uint32_t adts_buffer_fullness = 0x7ff;
 	adts_header[3] = adts_header[3]|(aac_frame_size>>11&0x3);
@@ -529,6 +530,17 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 	input_buffer_size[0] = bytes_valid + 7;
 
 	fwrite(adts_frame,bytes_valid+7,1,stdout);
+#else  //write raw_data_len + raw_data
+	uint8_t raw_data_len[4];
+	raw_data_len[0] = 0xff;
+	raw_data_len[1] = 0xff;
+	raw_data_len[2] = (uint8_t)((bytes_valid>>8) & 0xff);
+	raw_data_len[3] = (uint8_t)(bytes_valid & 0xff);
+	
+	fwrite(raw_data_len, 4, 1, stdout);	   //cyang add write frame_len
+	fwrite(data, bytes_valid, 1, stdout);  //cyang add write frame_data
+#endif
+
 #if 0
 	// fill internal input buffer
 	AAC_DECODER_ERROR result = aacDecoder_Fill(handle, input_buffer, input_buffer_size, &bytes_valid);
