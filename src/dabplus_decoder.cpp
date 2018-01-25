@@ -473,7 +473,7 @@ AACDecoderFDKAAC::AACDecoderFDKAAC(SubchannelSinkObserver* observer, SuperframeF
 
 	uint8_t* asc_array[1] {asc};
 	const unsigned int asc_sizeof_array[1] {(unsigned int) asc_len};
-	fwrite(asc, 7 , 1, stdout);    //cyang add
+	fwrite(asc, 7 , 1, stdout);    //cyang add write asc to file 
 	init_result = aacDecoder_ConfigRaw(handle, asc_array, asc_sizeof_array);
 	if(init_result != AAC_DEC_OK)
 		throw std::runtime_error("AACDecoderFDKAAC: error while aacDecoder_ConfigRaw: " + std::to_string(init_result));
@@ -502,14 +502,6 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 //	frame_len[1] = (uint8_t)(bytes_valid&0xff);
 //	fprintf(stderr, "frame_len[0] = %#x\n",frame_len[0]);
 //	fprintf(stderr, "frame_len[1] = %#x\n",frame_len[1]);
-
-	//delete pad
-	uint8_t pad_len = data[1];
-	if(data[0] == 0x80)
-	{
-		data += pad_len + 2;
-		bytes_valid -= pad_len + 2;
-	}
 	
 #if 0 //write adts
 	uint32_t aac_frame_size = bytes_valid + 7; //len + adts_header_len
@@ -530,15 +522,48 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 	input_buffer_size[0] = bytes_valid + 7;
 
 	fwrite(adts_frame,bytes_valid+7,1,stdout);
-#else  //write raw_data_len + raw_data
+#elif 0  //write raw_data_len + raw_data
+	//delete pad
+	uint8_t pad_len = data[1];
+	if(data[0] == 0x80)
+	{
+		data += pad_len + 2;
+		bytes_valid -= pad_len + 2;
+	}
+	
 	uint8_t raw_data_len[4];
 	raw_data_len[0] = 0xff;
 	raw_data_len[1] = 0xff;
 	raw_data_len[2] = (uint8_t)((bytes_valid>>8) & 0xff);
 	raw_data_len[3] = (uint8_t)(bytes_valid & 0xff);
 	
-	fwrite(raw_data_len, 4, 1, stdout);	   //cyang add write frame_len
-	fwrite(data, bytes_valid, 1, stdout);  //cyang add write frame_data
+//	fwrite(raw_data_len, 4, 1, stdout);	   //cyang add write frame_len
+//	fwrite(data, bytes_valid, 1, stdout);  //cyang add write frame_data
+
+#else //write for asc + pad + data
+	uint8_t format_header[4];
+	uint8_t pad_len = data[1];
+	uint16_t audio_data_len = bytes_valid;
+
+	format_header[0] = 0xff;
+	if(data[0] == 0x80)   //pad
+	{
+		format_header[1] = pad_len;
+		audio_data_len -= (pad_len + 2);
+		data += 2;
+		bytes_valid -= 2;
+	}
+	else
+	{
+		format_header[1] = 0x00;
+	}
+
+	format_header[2] = (uint8_t)((audio_data_len>>8) & 0xff);
+	format_header[3] = (uint8_t)(audio_data_len & 0xff);
+
+	fwrite(format_header, 4, 1, stdout);
+	fwrite(data, bytes_valid, 1, stdout);
+	
 #endif
 
 #if 0
