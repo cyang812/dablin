@@ -540,6 +540,17 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 //	fwrite(raw_data_len, 4, 1, stdout);	   //cyang add write frame_len
 //	fwrite(data, bytes_valid, 1, stdout);  //cyang add write frame_data
 
+#elif 1   //write pad data
+	uint8_t format_header[2];
+	format_header[0] = 0x55;
+	format_header[1] = 0xaa;
+	uint8_t pad_len = 0;
+	if(data[0] == 0x80)
+	{
+		pad_len = data[1] + 2;  //(0x80 pad_len)
+		fwrite(format_header, 2, 1, stdout);
+		fwrite(data, pad_len, 1, stdout);
+	}
 #else //write for asc + pad + data
 	uint8_t format_header[4];
 	uint8_t pad_len = data[1];
@@ -563,7 +574,6 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 
 	fwrite(format_header, 4, 1, stdout);
 	fwrite(data, bytes_valid, 1, stdout);
-	
 #endif
 
 #if 0
