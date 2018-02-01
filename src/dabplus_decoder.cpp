@@ -44,6 +44,19 @@ SuperframeFilter::~SuperframeFilter() {
 }
 
 void SuperframeFilter::Feed(const uint8_t *data, size_t len) {
+
+	//cyang add for test
+//	fprintf(stderr, "SuperframeFilter: Feed... len = %d\n",len);
+
+	uint16_t f_len = (uint16_t)len;
+	uint8_t format_header[4];
+	format_header[0] = 0xff;
+	format_header[1] = 0xff;
+	format_header[2] = (uint8_t)(f_len>>8);
+	format_header[3] = (uint8_t)f_len;
+	fwrite(format_header, 4, 1, stdout);
+	fwrite(data, len, 1, stdout);
+
 	// check frame len
 	if(frame_len) {
 		if(frame_len != len) {
@@ -135,7 +148,7 @@ void SuperframeFilter::CheckForPAD(const uint8_t *data, size_t len) {
 	bool present = false;
 
 	// check for PAD (embedded into Data Stream Element)
-	if(len >= 3 && (data[0] >> 5) == 4) {
+	if(len >= 3 && (data[0] >> 5) == 4) {   //check data[0] == 0x80
 		size_t pad_start = 2;
 		size_t pad_len = data[1];
 		if(pad_len == 255) {
@@ -349,6 +362,7 @@ AACDecoder::AACDecoder(std::string decoder_name, SubchannelSinkObserver* observe
 		}
 	}
 
+#if 0  //cyang add for adts format
 	adts_fixed *fixed;
 	adts_variable *variable;
 	memset(adts_header,0,7);
@@ -379,6 +393,7 @@ AACDecoder::AACDecoder(std::string decoder_name, SubchannelSinkObserver* observe
 	adts_header[4] = ((variable->frame_length>>3)&0xff);
 	adts_header[5] = (((variable->frame_length&0x7)<<5)|((variable->adts_buffer_fullness>>6)&0x1f));
 	adts_header[6] = (((variable->adts_buffer_fullness&0x3F)<<2)|(variable->number_of_raw_data_blocks_in_frame));
+#endif	
 }
 
 
@@ -473,7 +488,7 @@ AACDecoderFDKAAC::AACDecoderFDKAAC(SubchannelSinkObserver* observer, SuperframeF
 
 	uint8_t* asc_array[1] {asc};
 	const unsigned int asc_sizeof_array[1] {(unsigned int) asc_len};
-	fwrite(asc, 7 , 1, stdout);    //cyang add write asc to file 
+//	fwrite(asc, 7 , 1, stdout);    //cyang add write asc to file 
 	init_result = aacDecoder_ConfigRaw(handle, asc_array, asc_sizeof_array);
 	if(init_result != AAC_DEC_OK)
 		throw std::runtime_error("AACDecoderFDKAAC: error while aacDecoder_ConfigRaw: " + std::to_string(init_result));
@@ -540,7 +555,7 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 //	fwrite(raw_data_len, 4, 1, stdout);	   //cyang add write frame_len
 //	fwrite(data, bytes_valid, 1, stdout);  //cyang add write frame_data
 
-#elif 1   //write pad data
+#elif 0   //write pad data
 	uint8_t format_header[2];
 	format_header[0] = 0x55;
 	format_header[1] = 0xaa;
@@ -551,7 +566,7 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 		fwrite(format_header, 2, 1, stdout);
 		fwrite(data, pad_len, 1, stdout);
 	}
-#else //write for asc + pad + data
+#elif 0//write for asc + pad + data
 	uint8_t format_header[4];
 	uint8_t pad_len = data[1];
 	uint16_t audio_data_len = bytes_valid;
@@ -576,7 +591,7 @@ void AACDecoderFDKAAC::DecodeFrame(uint8_t *data, size_t len) {
 	fwrite(data, bytes_valid, 1, stdout);
 #endif
 
-#if 0
+#if 1
 	// fill internal input buffer
 	AAC_DECODER_ERROR result = aacDecoder_Fill(handle, input_buffer, input_buffer_size, &bytes_valid);
 	if(result != AAC_DEC_OK)
